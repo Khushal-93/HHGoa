@@ -13,3 +13,10 @@ data/processed/*
 data/evaluation/*
 !.gitkeep
 "@ | Set-Content .gitignore
+# Python packaging
+*.egg-info/
+
+# Python cache
+__pycache__/
+.pytest_cache/
+*.pyc
