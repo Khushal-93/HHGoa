@@ -24,3 +24,6 @@ data/evaluation/*
 __pycache__/
 .pytest_cache/
 *.pyc
+# ONNX model export (regenerate with: py -3.13 scripts/export_onnx.py)
+data/processed/e5_small_onnx/
+
