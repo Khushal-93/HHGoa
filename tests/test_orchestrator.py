@@ -56,7 +56,7 @@ def test_text_pipeline_unanswerable(orchestrator):
 
 def test_voice_pipeline(orchestrator):
     audio_bytes = "What is a corporation?".encode("utf-8")
-    res = orchestrator.run_voice_pipeline(audio_bytes)
+    res = orchestrator.run_voice_pipeline(audio_bytes, allow_mock=True)
 
     assert res.transcript == "What is a corporation?"
     assert res.grounded is True

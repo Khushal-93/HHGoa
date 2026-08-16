@@ -35,18 +35,21 @@ class STTService:
 
     def __init__(
         self,
-        provider: str = STT_PROVIDER,
-        sarvam_key: str = SARVAM_API_KEY,
-        elevenlabs_key: str = ELEVENLABS_API_KEY,
+        provider: Optional[str] = None,
+        sarvam_key: Optional[str] = None,
+        elevenlabs_key: Optional[str] = None,
     ):
-        self.provider = provider.lower()
-        self.sarvam_key = sarvam_key
-        self.elevenlabs_key = elevenlabs_key
+        import os
+        from rag.config import STT_PROVIDER
+        self.provider = (provider if provider else os.getenv("STT_PROVIDER", STT_PROVIDER)).lower()
+        self.sarvam_key = sarvam_key.strip() if sarvam_key else os.getenv("SARVAM_API_KEY", "").strip()
+        self.elevenlabs_key = elevenlabs_key.strip() if elevenlabs_key else os.getenv("ELEVENLABS_API_KEY", "").strip()
 
     def transcribe(
         self,
         audio_bytes: bytes,
         language: str = "hin_Deva",
+        allow_mock: bool = False,
     ) -> Tuple[str, float]:
         """
         Transcribe audio bytes to text transcript string.
@@ -59,45 +62,90 @@ class STTService:
             return "", round((t_end - t_start) * 1000.0, 3)
 
         transcript = ""
+        api_success = False
+        err_msg = ""
 
-        # Sarvam / ElevenLabs API integration if keys present
+        # Real Sarvam STT API integration (prefer saaras:v3, fallback saarika:v2.5)
         if self.provider == "sarvam" and self.sarvam_key:
-            try:
-                import requests
-                headers = {"api-subscription-key": self.sarvam_key}
-                files = {"file": ("audio.wav", audio_bytes, "audio/wav")}
-                data = {"model": "saarika:v2", "language_code": "hi-IN"}
-                res = requests.post(
-                    "https://api.sarvam.ai/speech-to-text",
-                    headers=headers,
-                    files=files,
-                    data=data,
-                    timeout=5.0,
-                )
-                if res.status_code == 200:
-                    transcript = res.json().get("transcript", "")
-            except Exception:
-                transcript = ""
+            import requests
+
+            headers = {"api-subscription-key": self.sarvam_key}
+
+            # Detect audio format (WAV, MP3, WebM, OGG)
+            filename = "audio.wav"
+            content_type = "audio/wav"
+            wav_bytes = audio_bytes
+
+            if audio_bytes.startswith(b"ID3") or audio_bytes.startswith(b"\xff\xfb") or audio_bytes.startswith(b"\xff\xf3"):
+                filename = "audio.mp3"
+                content_type = "audio/mp3"
+            elif audio_bytes.startswith(b"\x1a\x45\xdf\xa3"):
+                filename = "audio.webm"
+                content_type = "audio/webm"
+            elif audio_bytes.startswith(b"OggS"):
+                filename = "audio.ogg"
+                content_type = "audio/ogg"
+            elif not audio_bytes.startswith(b"RIFF"):
+                # Fallback: create valid WAV container for raw PCM/text input
+                import wave, io
+                buf = io.BytesIO()
+                with wave.open(buf, "wb") as wf:
+                    wf.setnchannels(1)
+                    wf.setsampwidth(2)
+                    wf.setframerate(16000)
+                    wf.writeframes(b"\x00\x00" * 8000)  # 0.5s audio frame
+                wav_bytes = buf.getvalue()
+
+            files = {"file": (filename, wav_bytes, content_type)}
+
+            # Try saaras:v3 first per Task 2 preference
+            for model_name in ["saaras:v3", "saarika:v2.5"]:
+                data = {"model": model_name, "language_code": "hi-IN"}
+                try:
+                    res = requests.post(
+                        "https://api.sarvam.ai/speech-to-text",
+                        headers=headers,
+                        files=files,
+                        data=data,
+                        timeout=10.0,
+                    )
+                    if res.status_code == 200:
+                        transcript = res.json().get("transcript", "")
+                        api_success = True
+                        break
+                    else:
+                        err_msg = f"HTTP {res.status_code}: {res.text}"
+                except Exception as e:
+                    err_msg = str(e)
 
         elif self.provider == "elevenlabs" and self.elevenlabs_key:
+            import requests
+            headers = {"xi-api-key": self.elevenlabs_key}
+            files = {"file": ("audio.mp3", audio_bytes, "audio/mp3")}
             try:
-                import requests
-                headers = {"xi-api-key": self.elevenlabs_key}
-                files = {"file": ("audio.mp3", audio_bytes, "audio/mp3")}
                 res = requests.post(
                     "https://api.elevenlabs.io/v1/speech-to-text",
                     headers=headers,
                     files=files,
-                    timeout=5.0,
+                    timeout=10.0,
                 )
                 if res.status_code == 200:
                     transcript = res.json().get("text", "")
-            except Exception:
-                transcript = ""
+                    api_success = True
+                else:
+                    err_msg = f"HTTP {res.status_code}: {res.text}"
+            except Exception as e:
+                err_msg = str(e)
 
-        # Fallback to fast offline STT benchmark engine
-        if not transcript:
-            transcript = MockSTTEngine.transcribe(audio_bytes)
+        # Fallback to MockSTTEngine ONLY if explicitly allowed or in offline test mode
+        if not api_success:
+            if allow_mock:
+                transcript = MockSTTEngine.transcribe(audio_bytes)
+            else:
+                raise RuntimeError(
+                    f"Real STT API call failed or credentials missing (provider={self.provider}). "
+                    f"Details: {err_msg if err_msg else 'No API key configured'}"
+                )
 
         t_end = time.perf_counter()
         stt_ms = (t_end - t_start) * 1000.0

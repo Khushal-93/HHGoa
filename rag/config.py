@@ -1,11 +1,15 @@
 import os
 from pathlib import Path
+from dotenv import load_dotenv
 
 # Base paths
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
 RAW_DATA_DIR = DATA_DIR / "raw"
 PROCESSED_DATA_DIR = DATA_DIR / "processed"
+
+# Load environment variables from project root .env
+load_dotenv(dotenv_path=BASE_DIR / ".env")
 
 # HuggingFace Dataset
 DATASET_REPO = os.getenv("DATASET_REPO", "ai4bharat/MSMARCO-XI")

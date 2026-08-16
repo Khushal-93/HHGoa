@@ -5,7 +5,7 @@ from rag.stt import STTService, MockSTTEngine
 def test_stt_mock_transcribe():
     service = STTService()
     audio = "What is a corporation?".encode("utf-8")
-    transcript, stt_ms = service.transcribe(audio)
+    transcript, stt_ms = service.transcribe(audio, allow_mock=True)
 
     assert transcript == "What is a corporation?"
     assert stt_ms >= 0.0

@@ -165,6 +165,7 @@ class RAGOrchestrator:
         self,
         audio_bytes: bytes,
         language: str = "hin_Deva",
+        allow_mock: bool = False,
     ) -> VoiceQueryResponse:
         """
         Execute full Voice RAG pipeline: STT -> Text RAG -> VoiceQueryResponse.
@@ -175,6 +176,7 @@ class RAGOrchestrator:
         transcript, stt_ms = self.stt_service.transcribe(
             audio_bytes=audio_bytes,
             language=language,
+            allow_mock=allow_mock,
         )
 
         if not transcript or not transcript.strip():
