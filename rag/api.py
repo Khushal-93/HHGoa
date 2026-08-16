@@ -1,20 +1,22 @@
 from contextlib import asynccontextmanager
 from typing import Any, Dict, List, Optional
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from pydantic import BaseModel, Field
 
 from rag.config import DEFAULT_TOP_K, FAISS_INDEX_PATH, METADATA_PATH
 from rag.embeddings import MultilingualEmbeddingModel
 from rag.index import VectorIndex
+from rag.orchestrator import RAGOrchestrator
 from rag.retrieval import RetrievalService
 
-# Global service instance
+# Global service and orchestrator instances
 retrieval_service: Optional[RetrievalService] = None
+orchestrator: Optional[RAGOrchestrator] = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global retrieval_service
+    global retrieval_service, orchestrator
     embedding_model = MultilingualEmbeddingModel()
 
     if FAISS_INDEX_PATH.exists() and METADATA_PATH.exists():
@@ -26,13 +28,16 @@ async def lifespan(app: FastAPI):
         embedding_model=embedding_model,
         index=index,
     )
+    orchestrator = RAGOrchestrator(
+        retrieval_service=retrieval_service,
+    )
     yield
 
 
 app = FastAPI(
-    title="HHGoa High-Performance RAG Retrieval API",
-    description="Low-latency vector retrieval service for HHGoa Voice RAG System",
-    version="0.1.0",
+    title="HHGoa Ultra-Low-Latency Grounded RAG & Voice API",
+    description="Full grounded RAG pipeline and voice retrieval service for HHGoa Voice RAG System",
+    version="0.2.0",
     lifespan=lifespan,
 )
 
@@ -50,7 +55,7 @@ class ResultItem(BaseModel):
     metadata: Dict[str, Any] = {}
 
 
-class TimingItem(BaseModel):
+class RetrievalTimingItem(BaseModel):
     embedding_ms: float
     retrieval_ms: float
     total_ms: float
@@ -58,7 +63,51 @@ class TimingItem(BaseModel):
 
 class RetrievalApiResponse(BaseModel):
     results: List[ResultItem]
-    timing: TimingItem
+    timing: RetrievalTimingItem
+
+
+class GroundedQueryApiRequest(BaseModel):
+    query: str = Field(..., description="User question string", json_schema_extra={"example": "What is a corporation?"})
+
+
+class SourceItem(BaseModel):
+    chunk_id: str
+    text: str
+    score: float
+    language: str = "hin_Deva"
+    metadata: Dict[str, Any] = {}
+
+
+class PipelineTimingApiResponse(BaseModel):
+    stt_ms: float = 0.0
+    query_preprocessing_ms: float = 0.0
+    query_embedding_ms: float = 0.0
+    vector_search_ms: float = 0.0
+    metadata_lookup_ms: float = 0.0
+    retrieval_total_ms: float = 0.0
+    answerability_check_ms: float = 0.0
+    context_build_ms: float = 0.0
+    llm_generation_ms: float = 0.0
+    grounding_validation_ms: float = 0.0
+    api_overhead_ms: float = 0.0
+    total_pipeline_ms: float = 0.0
+
+
+class GroundedQueryApiResponse(BaseModel):
+    answer: str
+    sources: List[SourceItem]
+    timing: PipelineTimingApiResponse
+    grounded: bool
+    confidence_score: float
+
+
+class VoiceQueryApiResponse(BaseModel):
+    transcript: str
+    answer: str
+    sources: List[SourceItem]
+    timing: PipelineTimingApiResponse
+    grounded: bool
+    confidence_score: float
 
 
 @app.get("/health")
@@ -99,10 +148,104 @@ def retrieve(request: RetrievalRequest):
         for r in response.results
     ]
 
-    timing = TimingItem(
+    timing = RetrievalTimingItem(
         embedding_ms=response.timing.embedding_ms,
         retrieval_ms=response.timing.retrieval_ms,
         total_ms=response.timing.total_ms,
     )
 
     return RetrievalApiResponse(results=results, timing=timing)
+
+
+@app.post("/api/query", response_model=GroundedQueryApiResponse)
+def query_rag(request: GroundedQueryApiRequest):
+    if orchestrator is None:
+        raise HTTPException(status_code=503, detail="RAG Orchestrator not initialized")
+
+    if not request.query.strip():
+        raise HTTPException(status_code=400, detail="Query string cannot be empty")
+
+    res = orchestrator.run_text_pipeline(query=request.query)
+
+    sources = [
+        SourceItem(
+            chunk_id=s.chunk_id,
+            text=s.text,
+            score=s.score,
+            language=s.language,
+            metadata=s.metadata,
+        )
+        for s in res.sources
+    ]
+
+    t = res.timing
+    timing = PipelineTimingApiResponse(
+        stt_ms=t.stt_ms,
+        query_preprocessing_ms=t.query_preprocessing_ms,
+        query_embedding_ms=t.query_embedding_ms,
+        vector_search_ms=t.vector_search_ms,
+        metadata_lookup_ms=t.metadata_lookup_ms,
+        retrieval_total_ms=t.retrieval_total_ms,
+        answerability_check_ms=t.answerability_check_ms,
+        context_build_ms=t.context_build_ms,
+        llm_generation_ms=t.llm_generation_ms,
+        grounding_validation_ms=t.grounding_validation_ms,
+        api_overhead_ms=t.api_overhead_ms,
+        total_pipeline_ms=t.total_pipeline_ms,
+    )
+
+    return GroundedQueryApiResponse(
+        answer=res.answer,
+        sources=sources,
+        timing=timing,
+        grounded=res.grounded,
+        confidence_score=res.confidence_score,
+    )
+
+
+@app.post("/api/voice/ask", response_model=VoiceQueryApiResponse)
+async def ask_voice(file: UploadFile = File(...), language: str = Form("hin_Deva")):
+    if orchestrator is None:
+        raise HTTPException(status_code=503, detail="RAG Orchestrator not initialized")
+
+    audio_bytes = await file.read()
+    if not audio_bytes:
+        raise HTTPException(status_code=400, detail="Empty audio payload provided")
+
+    res = orchestrator.run_voice_pipeline(audio_bytes=audio_bytes, language=language)
+
+    sources = [
+        SourceItem(
+            chunk_id=s.chunk_id,
+            text=s.text,
+            score=s.score,
+            language=s.language,
+            metadata=s.metadata,
+        )
+        for s in res.sources
+    ]
+
+    t = res.timing
+    timing = PipelineTimingApiResponse(
+        stt_ms=t.stt_ms,
+        query_preprocessing_ms=t.query_preprocessing_ms,
+        query_embedding_ms=t.query_embedding_ms,
+        vector_search_ms=t.vector_search_ms,
+        metadata_lookup_ms=t.metadata_lookup_ms,
+        retrieval_total_ms=t.retrieval_total_ms,
+        answerability_check_ms=t.answerability_check_ms,
+        context_build_ms=t.context_build_ms,
+        llm_generation_ms=t.llm_generation_ms,
+        grounding_validation_ms=t.grounding_validation_ms,
+        api_overhead_ms=t.api_overhead_ms,
+        total_pipeline_ms=t.total_pipeline_ms,
+    )
+
+    return VoiceQueryApiResponse(
+        transcript=res.transcript,
+        answer=res.answer,
+        sources=sources,
+        timing=timing,
+        grounded=res.grounded,
+        confidence_score=res.confidence_score,
+    )
