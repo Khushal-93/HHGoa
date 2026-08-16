@@ -16,6 +16,10 @@ data/evaluation/*
 # Python packaging
 *.egg-info/
 
+# Persistence artifacts
+*.faiss
+*.pkl
+
 # Python cache
 __pycache__/
 .pytest_cache/
