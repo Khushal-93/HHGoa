@@ -117,10 +117,19 @@ def health_check():
         and retrieval_service.index is not None
         and len(retrieval_service.index) > 0
     )
+    idx_obj = retrieval_service.index if index_loaded else None
+    idx_type = idx_obj.index.__class__.__name__ if idx_obj and idx_obj.index else "None"
+    ef_search = getattr(idx_obj.index.hnsw, "efSearch", None) if idx_obj and hasattr(idx_obj.index, "hnsw") else None
+    dim = idx_obj.dimension if idx_obj else 0
+
     return {
         "status": "healthy",
         "index_loaded": index_loaded,
-        "indexed_chunks": len(retrieval_service.index) if retrieval_service and retrieval_service.index else 0,
+        "indexed_chunks": len(idx_obj) if idx_obj else 0,
+        "vector_count": len(idx_obj) if idx_obj else 0,
+        "dimension": dim,
+        "index_type": idx_type,
+        "ef_search": ef_search,
     }
 
 

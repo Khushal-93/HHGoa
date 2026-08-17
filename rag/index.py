@@ -115,6 +115,9 @@ class VectorIndex:
         faiss_idx = faiss.read_index(str(index_path))
         dimension = faiss_idx.d
 
+        if hasattr(faiss_idx, "hnsw"):
+            faiss_idx.hnsw.efSearch = 128
+
         obj = cls(dimension=dimension)
         obj.index = faiss_idx
 
