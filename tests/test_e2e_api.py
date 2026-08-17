@@ -6,6 +6,7 @@ from rag.index import VectorIndex
 from rag.models import Chunk
 from rag.orchestrator import RAGOrchestrator
 from rag.retrieval import RetrievalService
+from rag.stt import STTService
 
 
 @pytest.fixture
@@ -30,7 +31,9 @@ def client():
     index.add_embeddings(embeddings, chunks)
 
     ret_service = RetrievalService(embedding_model=embedder, index=index)
-    test_orchestrator = RAGOrchestrator(retrieval_service=ret_service)
+    # Use mock STT provider so voice tests don't require real Sarvam API credentials
+    mock_stt = STTService(provider="mock")
+    test_orchestrator = RAGOrchestrator(retrieval_service=ret_service, stt_service=mock_stt)
 
     with TestClient(app) as test_client:
         import rag.api

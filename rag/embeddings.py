@@ -1,3 +1,4 @@
+import os
 from typing import List, Optional
 import numpy as np
 
@@ -35,8 +36,9 @@ def _build_onnx_session():
             sess_opts,
             providers=["CPUExecutionProvider"],
         )
-        # Tokenizer is loaded from the ST model (same weights, no ONNX dependency)
-        tokenizer = SentenceTransformer(EMBEDDING_MODEL_NAME, device="cpu").tokenizer
+        # Tokenizer is loaded directly via AutoTokenizer (fast, no PyTorch load needed)
+        from transformers import AutoTokenizer
+        tokenizer = AutoTokenizer.from_pretrained(EMBEDDING_MODEL_NAME)
         return session, tokenizer
     except Exception:
         return None, None
@@ -79,6 +81,14 @@ class MultilingualEmbeddingModel:
         self.device = device
         self.query_prefix = QUERY_PREFIX
         self.passage_prefix = PASSAGE_PREFIX
+
+        # Optimize PyTorch CPU thread count for batch embedding speed
+        import torch
+        if device == "cpu" or not torch.cuda.is_available():
+            try:
+                torch.set_num_threads(min(8, os.cpu_count() or 4))
+            except Exception:
+                pass
 
         # ONNX fast-path (auto-selected if model file is present)
         self._ort_session, self._ort_tokenizer = _build_onnx_session()
