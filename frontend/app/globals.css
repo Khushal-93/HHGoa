@@ -1,0 +1,244 @@
+@import "tailwindcss";
+
+:root {
+  --forest: #003d2b;
+  --forest-dark: #002b20;
+  --forest-black: #001f18;
+  --parchment: #f7f0dd;
+  --cream: #fff8e8;
+  --beige: #ede3c9;
+  --gold: #f5c51b;
+  --gold-warm: #e7b51b;
+  --pink: #f00072;
+  --tropical: #18744a;
+  --text-on-dark: #fff8e8;
+  --text-on-dark-muted: #f4eedc;
+  --text-on-light: #073a2a;
+  --text-on-light-muted: #123e31;
+  --border-muted: rgba(237, 227, 201, 0.25);
+  --border-gold: rgba(245, 197, 27, 0.4);
+}
+
+@theme inline {
+  --color-forest: var(--forest);
+  --color-forest-dark: var(--forest-dark);
+  --color-forest-black: var(--forest-black);
+  --color-parchment: var(--parchment);
+  --color-cream: var(--cream);
+  --color-beige: var(--beige);
+  --color-gold: var(--gold);
+  --color-gold-warm: var(--gold-warm);
+  --color-pink: var(--pink);
+  --color-tropical: var(--tropical);
+  --color-text-on-dark: var(--text-on-dark);
+  --color-text-on-dark-muted: var(--text-on-dark-muted);
+  --color-text-on-light: var(--text-on-light);
+  --color-text-on-light-muted: var(--text-on-light-muted);
+  --font-serif: var(--font-cormorant);
+  --font-sans: var(--font-inter);
+}
+
+/* ── RESET ── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--forest-black);
+  color: var(--text-on-dark);
+  font-family: var(--font-inter), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── REDUCED MOTION ── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ── TEXTURES ── */
+.paper-texture {
+  background-color: var(--parchment);
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+}
+
+.forest-texture {
+  background-color: var(--forest);
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.05'/%3E%3C/svg%3E");
+}
+
+/* ── TYPOGRAPHY ── */
+.editorial-heading {
+  font-family: var(--font-cormorant), Georgia, serif;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 0.93;
+}
+
+.label-upper {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+/* ── BUTTONS ── */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.875rem 1.75rem;
+  background: var(--gold);
+  color: var(--forest-black);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border: 1.5px solid var(--gold-warm);
+  border-radius: 0;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-primary::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px rgba(245, 197, 27, 0.4);
+  background: var(--gold-warm);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.875rem 1.75rem;
+  background: transparent;
+  color: var(--cream);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border: 1.5px solid var(--border-gold);
+  border-radius: 0;
+  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.btn-secondary:hover {
+  transform: translateY(-2px);
+  border-color: var(--gold);
+  background: rgba(245, 197, 27, 0.08);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.btn-secondary:active {
+  transform: translateY(0);
+}
+
+/* ── CARDS ── */
+.card-hover {
+  transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-5px);
+  border-color: rgba(245, 197, 27, 0.35);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+/* ── FOCUS ── */
+:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 3px;
+}
+
+/* ── CUSTOM SCROLLBAR ── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--forest-black);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--tropical);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--gold);
+}
+
+/* ── SELECTION ── */
+::selection {
+  background: rgba(245, 197, 27, 0.3);
+  color: var(--cream);
+}
+
+/* ── KEYFRAME ANIMATIONS ── */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+@keyframes pulse-gold {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(245, 197, 27, 0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(245, 197, 27, 0); }
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+
+.animate-pulse-gold {
+  animation: pulse-gold 2.5s ease-in-out infinite;
+}
+
+/* ── GOLD SHIMMER TEXT ── */
+.text-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--gold) 0%,
+    #fff8a0 40%,
+    var(--gold) 60%,
+    var(--gold-warm) 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shimmer 3s linear infinite;
+}
