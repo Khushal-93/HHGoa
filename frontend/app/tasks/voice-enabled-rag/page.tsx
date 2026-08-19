@@ -1,5 +1,6 @@
 import Link from "next/link";
 import MicrophoneIllustration from "@/components/MicrophoneIllustration";
+import VoiceRagPlayground from "@/components/VoiceRagPlayground";
 import TaskFeatureGrid from "@/components/TaskFeatureGrid";
 import DeadlineCard from "@/components/DeadlineCard";
 import SubmissionChecklist from "@/components/SubmissionChecklist";
@@ -50,6 +51,11 @@ export default function VoiceEnabledRAGPage() {
           <div className="lg:col-span-5 flex justify-center lg:justify-end">
             <MicrophoneIllustration />
           </div>
+        </div>
+
+        {/* Live Interactive Voice & Text RAG Playground */}
+        <div className="mt-12">
+          <VoiceRagPlayground />
         </div>
 
         {/* Feature Grid */}

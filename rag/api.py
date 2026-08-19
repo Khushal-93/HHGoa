@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 from typing import Any, Dict, List, Optional
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from rag.config import DEFAULT_TOP_K, FAISS_INDEX_PATH, METADATA_PATH
@@ -39,6 +40,17 @@ app = FastAPI(
     description="Full grounded RAG pipeline and voice retrieval service for HHGoa Voice RAG System",
     version="0.2.0",
     lifespan=lifespan,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
